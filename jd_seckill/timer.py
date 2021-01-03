@@ -7,18 +7,21 @@ import json
 
 from datetime import datetime
 
+import tcping
+
 from .jd_logger import logger
 from .config import global_config
 
 
 class Timer(object):
-    def __init__(self, sleep_interval=0.5):
+    def __init__(self, sleep_interval=0.005):
         # '2018-09-28 22:45:50.000'
         self.buy_time = datetime.strptime(global_config.getRaw('config', 'buy_time'), "%Y-%m-%d %H:%M:%S.%f")
         self.buy_time_ms = int(time.mktime(self.buy_time.timetuple()) * 1000.0 + self.buy_time.microsecond / 1000)
         self.sleep_interval = sleep_interval
 
         self.diff_time = self.local_jd_time_diff()
+        self.rtt_time = self.ping_RTT()
 
     def jd_time(self):
         """
@@ -36,6 +39,18 @@ class Timer(object):
         :return:
         """
         return int(round(time.time() * 1000))
+        
+    def ping_RTT(self):
+        """
+        计算网络数据包单程需要的时间
+        """
+        p=tcping.Ping('marathon.jd.com',443,)
+        p.ping(10)
+        s=p.result.rows[0]
+        logger.info(s)
+        delrtt=s.average[:-2]
+        return float(delrtt)
+        
 
     def local_jd_time_diff(self):
         """
@@ -49,7 +64,7 @@ class Timer(object):
         while True:
             # 本地时间减去与京东的时间差，能够将时间误差提升到0.1秒附近
             # 具体精度依赖获取京东服务器时间的网络时间损耗
-            if self.local_time() - self.diff_time >= self.buy_time_ms:
+            if self.local_time() - self.diff_time + self.rtt_time >= self.buy_time_ms:
                 logger.info('时间到达，开始执行……')
                 break
             else:

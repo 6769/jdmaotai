@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- encoding=utf8 -*-
 
+import os
+import sys
 import random
 import time
 import requests
@@ -343,7 +345,15 @@ class JdSeckill(object):
         with ProcessPoolExecutor(work_count) as pool:
             for i in range(work_count):
                 pool.submit(self.seckill)
-
+        
+            while True:
+                chcc=input('press "q" to exit')
+                if chcc=='q':
+                    pool.shutdown(wait=False)
+                    
+                    sys.exit(0)
+                
+        
     def _reserve(self):
         """
         预约
